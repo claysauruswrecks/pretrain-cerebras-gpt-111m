@@ -94,6 +94,7 @@ def configure_training(output_dir="./pretrained_cerebras/"):
         save_steps=10_000,
         save_total_limit=2,
         prediction_loss_only=True,
+        optim="adamw_torch",
     )
     return training_args
 
@@ -119,9 +120,7 @@ def create_trainer(
     return trainer
 
 
-def quantize_model(
-    model: torch.nn.Module, example_input: torch.Tensor
-) -> torch.nn.Module:
+def quantize_model(model: torch.nn.Module) -> torch.nn.Module:
     # Quantize the model
     quantized_model = torch.quantization.quantize_dynamic(
         model, {torch.nn.Linear}, dtype=torch.qint8
@@ -130,7 +129,14 @@ def quantize_model(
 
 
 def main():
+    torch.set_num_threads(24)
+    torch.set_num_interop_threads(24)
+    print(
+        f"threads: (num_threads, num_interop_threads) ({torch.get_num_threads()}, {torch.get_num_interop_threads()})"
+    )
     tokenizer, model = load_model_and_tokenizer()
+    # tokenizer, original_model = load_model_and_tokenizer()
+    # model = quantize_model(original_model)
     raw_dataset = load_dataset_without_tokenization()
     (
         tokenized_train_dataset,
@@ -145,12 +151,16 @@ def main():
     )
     trainer.train()
 
-    trainer.save_model("./pretrained_cerebras/")
+    trainer.save_model("./pretrained_cerebras_quantized/")
 
-    example_input = tokenized_train_dataset[0]["input_ids"]
-    quantized_model = quantize_model(model, example_input)
+    # example_input = tokenized_train_dataset[0]["input_ids"]
+    # quantized_model = quantize_model(model, example_input)
+    quantized_model = quantize_model(model)
 
-    torch.save(quantized_model.state_dict(), "./pretrained_cerebras/quantized-model.pt")
+    torch.save(
+        quantized_model.state_dict(),
+        "./pretrained_cerebras/quantized-pretrained-model.pt",
+    )
 
     test_results = trainer.evaluate(tokenized_test_dataset)
     print("Test Results:", test_results)
