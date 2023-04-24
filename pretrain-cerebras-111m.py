@@ -70,7 +70,7 @@ def create_validation_and_test_splits(
     return tokenized_train_dataset, tokenized_val_dataset, tokenized_test_dataset
 
 
-def create_data_loader(tokenized_dataset, tokenizer, batch_size=8):
+def create_data_loader(tokenized_dataset, tokenizer, batch_size=4):
     # Create a data collator for language modeling
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
@@ -90,10 +90,10 @@ def configure_training(output_dir="./pretrained_cerebras/"):
         output_dir=output_dir,
         overwrite_output_dir=True,
         num_train_epochs=2,
-        per_device_train_batch_size=2,
-        save_steps=10_000,
-        save_total_limit=2,
-        prediction_loss_only=True,
+        per_device_train_batch_size=4,
+        save_steps=1_000,
+        save_total_limit=5,
+        prediction_loss_only=False,
         optim="adamw_torch",
     )
     return training_args
@@ -131,6 +131,8 @@ def quantize_model(model: torch.nn.Module) -> torch.nn.Module:
 def main():
     # torch.set_num_threads(24)
     # torch.set_num_interop_threads(24)
+    # torch.set_num_threads(6)
+    # torch.set_num_interop_threads(6)
     print(
         f"threads: (num_threads, num_interop_threads) ({torch.get_num_threads()}, {torch.get_num_interop_threads()})"
     )
