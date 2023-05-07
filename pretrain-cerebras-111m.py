@@ -9,6 +9,7 @@ from transformers import (
     TrainingArguments,
     pipeline,
 )
+from transformers.integrations import TensorBoardCallback
 
 
 # Step 1: Load the model and the tokenizer
@@ -90,11 +91,21 @@ def configure_training(output_dir="./pretrained_cerebras/"):
         output_dir=output_dir,
         overwrite_output_dir=True,
         num_train_epochs=2,
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=2,
+        per_device_eval_batch_size=2,
         save_steps=1_000,
         save_total_limit=5,
         prediction_loss_only=False,
         optim="adamw_torch",
+        evaluation_strategy="steps",
+        logging_dir="./logs",
+        log_level="info",
+        load_best_model_at_end=True,
+        metric_for_best_model="loss",
+        greater_is_better=False,
+        log_on_each_node=True,
+        logging_first_step=True,
+        logging_steps=1_000,
     )
     return training_args
 
@@ -151,6 +162,8 @@ def main():
     trainer = create_trainer(
         model, tokenizer, tokenized_train_dataset, tokenized_val_dataset, training_args
     )
+    trainer.add_callback(TensorBoardCallback())
+
     trainer.train()
 
     trainer.save_model("./pretrained_cerebras/")
@@ -164,8 +177,8 @@ def main():
     #     "./pretrained_cerebras/quantized-pretrained-model.pt",
     # )
 
-    test_results = trainer.evaluate(tokenized_test_dataset)
-    print("Test Results:", test_results)
+    val_results = trainer.evaluate(tokenized_val_dataset)
+    print("Validation Results:", val_results)
 
     text = "Generative AI is "
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)

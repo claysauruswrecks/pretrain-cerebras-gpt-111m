@@ -4,6 +4,7 @@ torch
 transformers
 accelerate
 bitsandbytes
+tensorboard
 
 # dev
 black
